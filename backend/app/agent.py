@@ -82,10 +82,38 @@ def _parse_action_object(raw: str) -> ActionObject:
         raise ValueError("Action object must be a JSON object.")
 
     action = data.get("action")
-    if action not in {"ask_clarification", "call_tool", "answer"}:
-        raise ValueError("Action field must be one of ask_clarification, call_tool, answer.")
 
-    return data  # type: ignore[return-value]
+    # Happy path: action explicitly matches the supported verbs.
+    if action in {"ask_clarification", "call_tool", "answer"}:
+        return data  # type: ignore[return-value]
+
+    # Model sometimes returns the tool name as the action, e.g.:
+    # { "action": "lookup_order", "order_id": "...", "email_or_last_name": "..." }
+    tool_like_actions = {
+        "lookup_order",
+        "list_recent_orders",
+        "evaluate_refund_eligibility",
+        "get_policy_answer",
+    }
+    if isinstance(action, str) and action in tool_like_actions:
+        tool_args = data.get("tool_args")
+        if not isinstance(tool_args, dict):
+            # Treat all other top-level fields as arguments.
+            tool_args = {
+                k: v
+                for k, v in data.items()
+                if k not in {"action", "tool_name", "tool_args", "answer_text"}
+            }
+        return {
+            "action": "call_tool",
+            "tool_name": action,
+            "tool_args": tool_args,
+        }
+
+    raise ValueError(
+        "Action field must be one of ask_clarification, call_tool, answer, "
+        "or a known tool name."
+    )
 
 
 def _decide_next_action(messages: list[ChatMessage]) -> ActionObject:
@@ -107,7 +135,20 @@ def _decide_next_action(messages: list[ChatMessage]) -> ActionObject:
         }
         retry_messages = [retry_system] + decision_messages[1:]
         raw_retry = chat_completion(retry_messages, temperature=0.0)
-        return _parse_action_object(raw_retry)
+
+        try:
+            return _parse_action_object(raw_retry)
+        except ValueError:
+            # If the model still does not follow the schema, fall back to treating
+            # its response as a direct answer to the user.
+            fallback_text = raw_retry or raw or (
+                "I could not reliably interpret your request, but here is my best attempt "
+                "to respond based on the information provided."
+            )
+            return {
+                "action": "answer",
+                "answer_text": fallback_text,
+            }
 
 
 def _call_tool(tool_name: str, tool_args: dict[str, Any]) -> dict[str, Any]:

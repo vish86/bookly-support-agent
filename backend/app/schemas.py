@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -9,7 +9,7 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    conversation_id: str | None = Field(
+    conversation_id: Optional[str] = Field(
         default=None,
         description="Opaque client conversation identifier (optional, not persisted).",
     )
@@ -22,10 +22,10 @@ class ActionMetadata(BaseModel):
     action: Literal["ask_clarification", "call_tool", "answer"] = Field(
         ..., description="High-level agent decision for this turn."
     )
-    tool_name: str | None = Field(
+    tool_name: Optional[str] = Field(
         default=None, description="Name of tool used, if any."
     )
-    tool_args: dict[str, Any] | None = Field(
+    tool_args: Optional[dict[str, Any]] = Field(
         default=None, description="Arguments passed to the tool, if any."
     )
     is_clarifying_question: bool = Field(

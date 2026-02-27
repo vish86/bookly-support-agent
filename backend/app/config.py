@@ -1,8 +1,9 @@
 import os
 from functools import lru_cache
+from typing import Optional
 
 
-def _get_env(key: str, default: str | None = None) -> str:
+def _get_env(key: str, default: Optional[str] = None) -> str:
     value = os.getenv(key)
     if value is None:
         if default is not None:
