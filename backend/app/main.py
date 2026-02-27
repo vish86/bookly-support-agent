@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .agent import simple_agent_turn
-from .schemas import ChatRequest, ChatResponse, ChatMessage
+from .agent import agent_turn
+from .schemas import ChatRequest, ChatResponse
 
 
 app = FastAPI(title="Bookly Support Agent API")
@@ -33,7 +33,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             detail="Last message in the conversation must be from the user.",
         )
 
-    assistant_message, metadata = simple_agent_turn(request.messages)
+    assistant_message, metadata = agent_turn(request.messages)
 
     conversation_id = request.conversation_id or "local-session"
 
