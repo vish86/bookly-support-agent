@@ -63,6 +63,18 @@ Data flow (single turn):
   - Questions about shipping times, international shipping, refund windows, password reset.
   - Use `get_policy_answer` to avoid hallucinating unsupported policies.
 
+### Decision Rules
+
+- **Answer directly** when:
+  - The question is clearly about high-level policy (e.g. “What is your refund policy?”).
+  - No specific order lookup or refund computation is required.
+- **Ask a clarifying question** when:
+  - The user refers to “my order” without an order id or identifying email/last name.
+  - The requested action is ambiguous (multiple possible orders/items) or the information conflicts.
+- **Call a tool** when:
+  - The user provides (or has provided in previous turns) enough identifiers for a lookup.
+  - A concrete order status, refund eligibility decision, or policy snippet is needed.
+
 ### Action Object Schema
 
 The model is instructed to always produce a JSON **action object**:
@@ -85,6 +97,10 @@ Behavior:
 
 The backend validates this object; on invalid JSON or schema mismatch, it retries once with a stricter instruction.
 
+If the model still fails to follow the schema, the backend falls back to treating the raw model text as a direct `answer_text` to avoid surfacing errors to the user.
+
+## 4. Hallucination & Safety Controls
+
 ## 4. Hallucination & Safety Controls
 
 - **Scoped knowledge**:
@@ -105,7 +121,21 @@ The backend validates this object; on invalid JSON or schema mismatch, it retrie
   - Responses are formal, concise, and helpful.
   - No jokes, emojis, or unnecessary small talk.
 
-## 5. Production Readiness and Tradeoffs
+## 5. Example System Prompt
+
+A representative system prompt (abridged for brevity):
+
+> “You are Booklyʼs formal and concise customer support agent. You assist customers  
+> with order status, returns and refunds, and general policy questions (shipping, refunds,  
+> password reset). You must always respond with a single valid JSON object describing  
+> your next action, following this schema:  
+> `{ "action": "ask_clarification" | "call_tool" | "answer", "clarifying_question": string?, "tool_name": "lookup_order" | "list_recent_orders" | "evaluate_refund_eligibility" | "get_policy_answer"?, "tool_args": object?, "answer_text": string? }`.  
+> Use tools for concrete order and refund details, never invent order ids or shipment events,  
+> and say you do not know when questions fall outside Booklyʼs scope.”
+
+This system prompt is combined with the conversation history and (when needed) structured tool results to drive each turn.
+
+## 6. Production Readiness and Tradeoffs
 
 Tradeoffs made for the prototype:
 

@@ -26,5 +26,38 @@ The goal is to demonstrate thoughtful AI agent design rather than production-rea
 
 ## Running the Project
 
-See the detailed instructions in the design document and backend/frontend READMEs (to be added in later tasks).
+### 1. Backend (FastAPI + OpenAI)
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+export OPENAI_API_KEY="sk-..."           # required
+export OPENAI_MODEL="gpt-4o-mini"       # optional, defaults to gpt-4o-mini
+
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The API is then available at:
+
+- `GET http://localhost:8000/health`
+- `POST http://localhost:8000/chat`
+
+### 2. Frontend (Bookly Support Console UI)
+
+In a separate terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000` in your browser. The UI assumes the backend is reachable at `http://localhost:8000`.
+
+### 3. Design Document
+
+For the one-page AI agent design and more detail on architecture, prompts, tools, and productionization, see `docs/agent-design.md`.
 
